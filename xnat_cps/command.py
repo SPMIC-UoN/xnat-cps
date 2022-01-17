@@ -15,7 +15,7 @@ You MUST NOT rename or modify any files in this folder outside of XNAT.
 You MAY copy files directly from here elsewhere for processing, etc.
 """
 
-class MigrateError(Exception):
+class XnatCpsError(Exception):
     """
     Exception subclass to indicate 'expected' failures.
 
@@ -24,7 +24,7 @@ class MigrateError(Exception):
     """
     pass
 
-class Migrate:
+class XnatCps:
     def __init__(self, options):
         self.options = options
         self.src_proj_dir = os.path.join(options.xnat_archive, options.project)
@@ -44,7 +44,7 @@ class Migrate:
         
         try:
             cmd()
-        except MigrateError as exc:
+        except XnatCpsError as exc:
             self._fail(str(exc))
         except Exception as exc:
             self._fail(str(exc))
@@ -148,7 +148,7 @@ class Migrate:
     def _create_link(self):
         LOG.info(f"Replacing XNAT project archive with link")
         if os.path.islink(self.src_proj_dir):
-            raise MigrateError(f"Project archive folder: {self.src_proj_dir} is already linked to another folder")
+            raise XnatCpsError(f"Project archive folder: {self.src_proj_dir} is already linked to another folder")
         self._confirm("remove XNAT project archive and replace with link")
         shutil.rmtree(self.src_proj_dir)
         LOG.info(f" - Removed {self.src_proj_dir}")
@@ -156,30 +156,30 @@ class Migrate:
         LOG.info(f" - Created link to {self.dest_proj_dir}")
 
     def _confirm(self, desc):
-        resp = input(f"CONFIRM - To {desc} type 'yes' - any other response will cancel: ")
+        resp = input(f"CONFIRM: To {desc} type 'yes' - any other response will cancel: ")
         if resp.strip() != "yes":
-            raise MigrateError("User did not confirm")
+            raise XnatCpsError("User did not confirm")
 
     def _dir_writable(self, path, desc):
         LOG.info(f" - {desc}: {path}")
         if not os.path.isdir(path):
-            raise MigrateError(f"{desc}: {path} - not found or not a directory")
+            raise XnatCpsError(f"{desc}: {path} - not found or not a directory")
 
         if not os.access(path, os.W_OK):
-            raise MigrateError(f"{desc}: {path} - not writable by current user")
+            raise XnatCpsError(f"{desc}: {path} - not writable by current user")
     
     def _dir_not_exists(self, path, desc):
         LOG.info(f" - {desc}: {path}")
         if os.path.exists(path):
-            raise MigrateError(f"{desc}: {path} - already exists")
+            raise XnatCpsError(f"{desc}: {path} - already exists")
 
     def _dir_exists(self, path, desc):
         LOG.info(f" - {desc}: {path}")
         if not os.path.isdir(path):
-            raise MigrateError(f"{desc}: {path} - not found or not a directory")
+            raise XnatCpsError(f"{desc}: {path} - not found or not a directory")
             
         if not os.access(path, os.R_OK):
-            raise MigrateError(f"{desc}: {path} - not readable by current user")
+            raise XnatCpsError(f"{desc}: {path} - not readable by current user")
 
     def _sync(self, src, dest):
         LOG.info(f" - Copying data from {src}")
@@ -190,7 +190,7 @@ class Migrate:
         LOG.info(f" - Data copied")
         copy_data_size = self._dir_size(dest)
         if copy_data_size != self.data_size:
-            raise MigrateError(f"Destination data size {copy_data_size} does not match source data size {self.data_size}")
+            raise XnatCpsError(f"Destination data size {copy_data_size} does not match source data size {self.data_size}")
         else:
             LOG.info(f" - Size matches source: {copy_data_size}")
 
