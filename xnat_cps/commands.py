@@ -91,9 +91,6 @@ class Migrate:
         
         test(self.options.xnat_archive, "XNAT archive folder")
         test(self.src_proj_dir, "XNAT project archive folder")
-        
-        if os.path.islink(self.src_proj_dir):
-            raise MigrateError(f"Project archive folder: {self.src_proj_dir} is already linked to another folder")
 
         self.data_size = self._dir_size(self.src_proj_dir)
         data_size_mb = float(self.data_size) / 1048576
@@ -150,14 +147,16 @@ class Migrate:
 
     def _create_link(self):
         LOG.info(f"Replacing XNAT project archive with link")
-        self._confirm()
+        if os.path.islink(self.src_proj_dir):
+            raise MigrateError(f"Project archive folder: {self.src_proj_dir} is already linked to another folder")
+        self._confirm("remove XNAT project archive and replace with link")
         shutil.rmtree(self.src_proj_dir)
         LOG.info(f" - Removed {self.src_proj_dir}")
         os.symlink(self.dest_proj_dir, self.src_proj_dir)
         LOG.info(f" - Created link to {self.dest_proj_dir}")
 
-    def _confirm(self):
-        resp = input(" - Confirm by typing 'yes' - any other response will not migrate project: ")
+    def _confirm(self, desc):
+        resp = input(f"CONFIRM - To {desc} type 'yes' - any other response will cancel: ")
         if resp.strip() != "yes":
             raise MigrateError("User did not confirm")
 
@@ -187,7 +186,7 @@ class Migrate:
         LOG.info(f" - Copying data to {dest}")
         root, leaf = os.path.split(dest)
         assert leaf == os.path.basename(src)
-        subprocess.call(["rsync", "-a", src, root])
+        subprocess.call(["rsync", "-a", src + "/", dest])
         LOG.info(f" - Data copied")
         copy_data_size = self._dir_size(dest)
         if copy_data_size != self.data_size:
